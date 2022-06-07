@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">Test Dialog Temi</string>
+    <string name="title">Temi Health Assistant</string>
+    <string name="requests">Request Permissions: </string>
+    <string name="questionnaire">PROM Questionnaire </string>
+    <string name="enter_name">Please enter user name </string>
+    <string name="confirm_user">Confirm User </string>
+    <string name="make_call">Video Call Family </string>
+    <string name="introduction">Hi! I have a few questions to ask you! Whenever you are ready just press Start!</string>
+    <string name="title_quest">PROM Questionnaire </string>
+    <string name="start_btn">Start!</string>
+    <string name="WAKE">Wake Up!</string>
+    <string name="Disable">Request Face Recognition</string>
+    <string name="Settings">Request Settings</string>
+    <string name="Map">Request Map</string>
+    <string name="open_browser">Open Browser</string>
+    <string name="recognized">Recognized text</string>
+    <string name="instructions">Please Select one of the answers</string>
+    <string name="question_1">How often do you need help looking after yourself?</string>
+    <string name="question_2">How about when doing household tasks? Do you often need help?</string>
+    <string name="question_3">Do you often feel challenged when getting around your home or community?</string>
+    <string name="question_4">Do you ever feel that your health affects negatively your relationships with friends and family?</string>
+    <string name="question_5">Regarding your vision, how often do you struggle with seeing clearly?</string>
+    <string name="question_6">Do you ever feel any difficulty hearing clearly?</string>
+    <string name="question_7">How often do you have a hard time communicating with others?</string>
+    <string name="question_8">Do you ever feel difficulty when trying to sleep?</string>
+    <string name="question_9">How often do you feel anxious, worried or depressed?</string>
+    <string name="question_10">How often do you experience pain or discomfort?</string>
+    <string name="answer_1">Never</string>
+    <string name="answer_2">Rarely</string>
+    <string name="answer_3">Sometimes</string>
+    <string name="answer_4">Always</string>
+    <string name="goodbye">Those are all my questions for now. We can take a break now! Thank you!</string>
+</resources>
