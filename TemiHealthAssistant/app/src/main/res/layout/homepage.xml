@@ -14,7 +14,7 @@
         android:layout_width="445dp"
         android:layout_height="101dp"
         android:backgroundTint="#009688"
-        android:onClick="openBrowser"
+        android:onClick="startTimer"
         android:text="@string/make_call"
         android:textSize="22sp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -22,7 +22,8 @@
         app:layout_constraintHorizontal_bias="0.159"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.683" />
+        app:layout_constraintVertical_bias="0.683"
+        tools:ignore="OnClick" />
 
     <TextView
         android:id="@+id/textView"

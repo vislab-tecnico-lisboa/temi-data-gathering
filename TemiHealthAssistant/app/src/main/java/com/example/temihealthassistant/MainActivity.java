@@ -1,5 +1,7 @@
 package com.example.temihealthassistant;
 
+import static java.lang.System.currentTimeMillis;
+
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
@@ -8,6 +10,8 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -17,11 +21,20 @@ import android.widget.Toast;
 import android.view.Menu;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import com.google.gson.JsonObject;
+
 
 import androidx.annotation.CheckResult;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.mongodb.BasicDBObject;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.DBObject;
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import com.robotemi.sdk.Robot;
 import com.robotemi.sdk.TtsRequest;
 import com.robotemi.sdk.constants.SdkConstants;
@@ -32,16 +45,36 @@ import com.robotemi.sdk.listeners.OnRobotReadyListener;
 import com.robotemi.sdk.navigation.listener.OnDistanceToLocationChangedListener;
 import com.robotemi.sdk.permission.OnRequestPermissionResultListener;
 import com.robotemi.sdk.permission.Permission;
+import com.robotemi.sdk.listeners.OnDetectionDataChangedListener;
+import com.robotemi.sdk.model.DetectionData;
+import com.robotemi.sdk.navigation.listener.OnCurrentPositionChangedListener;
+import com.robotemi.sdk.navigation.model.Position;
+
 
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.IOException;
+import java.io.StringWriter;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 
 public class MainActivity extends AppCompatActivity implements
@@ -51,7 +84,9 @@ public class MainActivity extends AppCompatActivity implements
         OnFaceRecognizedListener,
         OnDistanceToLocationChangedListener,
         OnGoToLocationStatusChangedListener,
-        Robot.AsrListener{
+        Robot.AsrListener,
+        OnDetectionDataChangedListener,
+        OnCurrentPositionChangedListener{
 
     Robot robot;
     int question = 0;
@@ -63,11 +98,27 @@ public class MainActivity extends AppCompatActivity implements
     Boolean personFound = false;
     String userName;
 
+    private String DISTANCE_TAG = "Distance";
+    private String DETECTION_DATA_TAG = "Detection";
+    private String FACE_RECOGNIZED_TAG = "FaceRecognition";
+    private String HANDLER_TAG = "Handler";
+    private String NONE_VALUE = "None";
+
+    String currentPositionValue;
+    String currentGoalValue;
+    String lastFaceDetectionValue;
+
+    JSONObject currentPosition = new JSONObject();
+    JSONObject lastDetection = new JSONObject();
+    JSONObject currentGoal = new JSONObject();
+    JSONObject lastFaceDetection = new JSONObject();
+    final JSONObject json = new JSONObject();
+
     private EditText etName;
 
     int conversationStatus = 0; //0 - StandBy, 1 - Searching, 2 - Person Found, 3 - In Conversation
 
-    private List<String> locations = new ArrayList<>();;
+    private List<String> locations = new ArrayList<>();
     Iterator<String> itr = null;
     int size = 0;
     int locationNumber = 0;
@@ -87,6 +138,11 @@ public class MainActivity extends AppCompatActivity implements
 //    private static final int REQUEST_CODE_START_DETECTION_WITH_DISTANCE = 6;
 //    private static final int REQUEST_CODE_SEQUENCE_PLAY_WITHOUT_PLAYER = 7;
 //    private static final int REQUEST_CODE_GET_MAP_LIST = 8;
+
+    //private static final ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor();
+    ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+
+    //MongoClient mongoClient = new MongoClient(new MongoClientURI("mongodb://localhost:27017"));
 
     private static final String[] PERMISSIONS_STORAGE = {
             Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -131,6 +187,10 @@ public class MainActivity extends AppCompatActivity implements
             ""
     };
 
+    private final List<String> AnswersText = new ArrayList<>();
+
+
+
     /**
      * Checks if the app has permission to write to device storage
      * If the app does not has permission then the user will be prompted to grant permissions
@@ -143,6 +203,7 @@ public class MainActivity extends AppCompatActivity implements
             ActivityCompat.requestPermissions(activity, PERMISSIONS_STORAGE, REQUEST_EXTERNAL_STORAGE);
         }
     }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -160,28 +221,102 @@ public class MainActivity extends AppCompatActivity implements
             robot.requestToBeKioskApp();
         } else Log.i("PEDRO", ">>>>Is selected as kiosk App");
 
+        Log.i("PEDRO", "APP Initialized");
+        /*try {
+            System.out.println(Inet4Address.getLocalHost().getHostAddress());
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }*/
+
+        //String ipAddress = "10.1.20.87";
+        byte[] addr = new byte[]{10,1,20,87};
+
+        try {
+            InetAddress  inet = InetAddress.getByAddress(addr);
+            boolean reachable = inet.isReachable(5000);
+            if(reachable) Log.i("PEDRO", "Ping");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        /*try {
+            MongoClient mongoClient = new MongoClient("10.0.2.15", 27017);
+            Log.i("PEDRO", "MongoDB CLient");
+            DB database = mongoClient.getDB("test");
+            Log.i("PEDRO", "GET Database");
+            DBCollection collection = database.getCollection("custom");
+            Log.i("PEDRO", "Create Collection");
+            BasicDBObject document = new BasicDBObject();
+            document.put("name", "Shubham");
+            document.put("company", "Baeldung");
+            collection.insert(document);
+            Log.i("PEDRO", "Insert Document");
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }*/
+
+
+
+        //executor.scheduleAtFixedRate(runnable, 0, 100, TimeUnit.MILLISECONDS);
+
+
+        /*Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                System.out.println("delayed hello world");
+            }
+        },  4);*/
+
+        /*runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        //Do something after 1 second
+                        try {
+                            json.put("Position", currentPosition.toString());
+                            json.put("Goal", currentGoal.toString());
+                            json.put("Person", lastFaceDetection.toString());
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        Log.i("PEDRO", json.toString());
+                    }
+                }, 1000);
+            }
+        });*/
         /*if(robot.checkSelfPermission(Permission.FACE_RECOGNITION) != Permission.GRANTED) {
             robot.startFaceRecognition();
             Log.i("PEDRO", ">>>>Face Recognition Started");
         }*/
 
 
-        /*new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                    /*robot.startFaceRecognition();
-                    Log.i("PEDRO", ">>>>Face Recognition Started");
-
-                //TtsRequest ttsRequest = TtsRequest.create("Olá! Tenho umas perguntas para lhe fazer. Quando estiver pronto diga iniciar!", true, TtsRequest.Language.valueToEnum(14));
-                TtsRequest ttsRequest = TtsRequest.create("Can I try to recognize you?", false);
-                robot.speak(ttsRequest);
-                sleepy(6);
-                robot.finishConversation();
-                robot.wakeup();
-            }
-        }, 3000);*/
-
     }
+
+    Runnable runnable = new Runnable() {
+        public void run() {
+            Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+            System.out.println(Arrays.toString(AnswersText.toArray()));
+
+            try {
+                if(currentPosition.length() == 0) currentPositionValue = NONE_VALUE; else currentPositionValue = currentPosition.toString();
+                if(currentGoal.length() == 0)currentGoalValue= NONE_VALUE; else currentGoalValue = currentGoal.toString();
+                if(lastFaceDetection.length() == 0) lastFaceDetectionValue= NONE_VALUE; else lastFaceDetectionValue = lastFaceDetection.toString();
+                json.put("Position", currentPositionValue);
+                json.put("Goal", currentGoalValue);
+                json.put("Person", lastFaceDetectionValue);
+                json.put("Questions", Arrays.toString(questionsText));
+                json.put("Answers", Arrays.toString(AnswersText.toArray()));
+                json.put("TimeStamp", timestamp);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            Log.i("PEDRO", json.toString());
+
+        }
+    };
 
 
     @Override
@@ -199,6 +334,8 @@ public class MainActivity extends AppCompatActivity implements
         robot.addAsrListener(this);
         robot.addOnGoToLocationStatusChangedListener(this);
         robot.addOnDistanceToLocationChangedListener(this);
+        robot.addOnDetectionDataChangedListener(this);
+        robot.addOnCurrentPositionChangedListener(this);
     }
 
     @Override
@@ -212,6 +349,8 @@ public class MainActivity extends AppCompatActivity implements
         robot.removeAsrListener(this);
         robot.removeOnGoToLocationStatusChangedListener(this);
         robot.removeOnDistanceToLocationChangedListener(this);
+        robot.removeOnDetectionDataChangedListener(this);
+        robot.removeOnCurrentPositionChangedListener(this);
     }
 
     @Override
@@ -226,6 +365,7 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
     }
+
 
     public void questionnaireSelected(View view){
         setContentView(R.layout.activity_main);
@@ -404,10 +544,24 @@ public class MainActivity extends AppCompatActivity implements
         /*if(itr.hasNext()){
             robot.goTo(itr.next());
         } */
+        JSONObject nextLocation = new JSONObject();
+
         if(locationNumber < (size-1)){
             locationNumber ++;
+            try {
+                nextLocation.put("Next Location", locations.get(locationNumber));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            currentGoal = nextLocation;
             robot.goTo(locations.get(locationNumber));
         }else {
+            try {
+                nextLocation.put("Next Location", "home base");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            currentGoal = nextLocation;
             robot.goTo("home base");
         }
     }
@@ -475,6 +629,7 @@ public class MainActivity extends AppCompatActivity implements
         }else if (asrResult.contains("never")) {
             if(conversationStatus == 3){
                 Log.i("PEDRO", ">>>>Answer Heard");
+                AnswersText.add("Never");
                 int rand_int1 = rand.nextInt(5);
                 TtsRequest ttsRequest = TtsRequest.create(AnswerNever[rand_int1], false);
                 robot.speak(ttsRequest);
@@ -486,6 +641,7 @@ public class MainActivity extends AppCompatActivity implements
             }
         } else if (asrResult.contains("rarely")) {
             Log.i("PEDRO", ">>>>Answer Heard");
+            AnswersText.add("Rarely");
             int rand_int1 = rand.nextInt(4);
             TtsRequest ttsRequest = TtsRequest.create(AnswerRarely[rand_int1], false);
             robot.speak(ttsRequest);
@@ -496,6 +652,7 @@ public class MainActivity extends AppCompatActivity implements
             nextQuestion(question);
         } else if (asrResult.contains("sometimes")) {
             Log.i("PEDRO", ">>>>Answer Heard");
+            AnswersText.add("Sometimes");
             TtsRequest ttsRequest = TtsRequest.create("Could be worse, I guess!", false);
             robot.speak(ttsRequest);
             sleepy(4);
@@ -505,6 +662,7 @@ public class MainActivity extends AppCompatActivity implements
             nextQuestion(question);
         } else if (asrResult.contains("always")) {
             Log.i("PEDRO", ">>>>Answer Heard");
+            AnswersText.add("Always");
             int rand_int1 = rand.nextInt(5);
             TtsRequest ttsRequest = TtsRequest.create(AnswerAlways[rand_int1], false);
             robot.speak(ttsRequest);
@@ -623,9 +781,19 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     public void onFaceRecognized(@NotNull List<ContactModel> contactModelList) {
         Log.i("PEDRO", ">>>>Face Recognized");
+        JSONObject newFaceDetection = new JSONObject();
         for (ContactModel contactModel : contactModelList) {
             firstName = contactModel.getFirstName();
             lastName = contactModel.getLastName();
+            try {
+                newFaceDetection.put("First Name", contactModel.getFirstName());
+                newFaceDetection.put("Last Name", contactModel.getLastName());
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            Log.i("PEDRO", newFaceDetection.toString());
+            lastFaceDetection = newFaceDetection;
+
             if(firstName.contains("Pedro")){
                 Log.i("PEDRO", ">>>>Pedro Identified");
                 System.out.print("Pedro Identified");
@@ -638,6 +806,38 @@ public class MainActivity extends AppCompatActivity implements
                 //robot.startTelepresence("Pedro Custódio", "Pedro Custódio");
             }
         }
+    }
+
+    @Override
+    public void onDetectionDataChanged(@NonNull DetectionData detectionData) {
+        JSONObject newDetection =  new JSONObject();
+        try {
+            newDetection.put("isDetected", Boolean.valueOf(detectionData.isDetected()));
+            newDetection.put("Distance", detectionData.getDistance());
+            newDetection.put("angle", detectionData.getAngle());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        Log.i("PEDRO", newDetection.toString());
+
+        lastDetection = newDetection;
+    }
+
+    @Override
+    public void onCurrentPositionChanged(@NonNull Position position) {
+        JSONObject newPosition = new JSONObject();
+        try{
+            newPosition.put("x", position.getX());
+            newPosition.put("y", position.getY());
+            newPosition.put("yaw", position.getYaw());
+            newPosition.put("tiltAngle", position.getTiltAngle());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        Log.i("PEDRO", newPosition.toString());
+
+        currentPosition = newPosition;
+
     }
 
    /* public void getLocations(View view){

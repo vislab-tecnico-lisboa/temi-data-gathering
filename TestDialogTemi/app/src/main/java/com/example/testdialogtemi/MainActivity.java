@@ -634,7 +634,7 @@ public class MainActivity extends AppCompatActivity implements
                 robot.skidJoy(1,1);
                 System.out.print("Movement stopped");
                 Log.i("PEDRO", ">>>>Movement Stopped");
-                //robot.stopFaceRecognition();
+                robot.stopFaceRecognition();
                 robot.askQuestion("Hi, "+ firstName + ". Glad I found you! I have a few questions to ask you! Whenever you're ready just say Start!");
                 //robot.startTelepresence("Pedro Custódio", "Pedro Custódio");
             }

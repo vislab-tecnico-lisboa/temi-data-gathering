@@ -13,7 +13,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TestDialogTemi">
-        <activity android:name=".LocationActivity"></activity>
         <!-- Adding this meta-data is required in order to display this app in temi's launcher app -->
         <meta-data
             android:name="com.robotemi.sdk.metadata.SKILL"
@@ -44,13 +43,14 @@
             android:name="@string/metadata_permissions"
             android:value="com.robotemi.permission.settings,                        com.robotemi.permission.map,                        com.robotemi.permission.face_recognition" />
 
-        <activity android:name="com.example.com.example.temihealthassistant.MainActivity">
+        <activity android:name="com.example.temihealthassistant.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".LocationActivity" />
     </application>
 
 </manifest>
