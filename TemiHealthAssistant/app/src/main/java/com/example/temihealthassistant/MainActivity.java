@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -26,6 +27,7 @@ import com.google.gson.JsonObject;
 
 import androidx.annotation.CheckResult;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
@@ -59,17 +61,26 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Executors;
@@ -157,10 +168,10 @@ public class MainActivity extends AppCompatActivity implements
             "Do you ever feel that your health affects negatively your relationships with friends and family?",
             "Regarding your vision, how often do you struggle with seeing clearly?",
             "Do you ever feel any difficulty hearing clearly?",
-            "How often do you have a hard time communicating with others?",
+            /*"How often do you have a hard time communicating with others?",
             "Do you ever feel difficulty when trying to sleep?",
             "How often do you feel anxious, worried or depressed?",
-            "How often do you experience pain or discomfort?"
+            "How often do you experience pain or discomfort?"*/
 
     };
 
@@ -190,7 +201,6 @@ public class MainActivity extends AppCompatActivity implements
     private final List<String> AnswersText = new ArrayList<>();
 
 
-
     /**
      * Checks if the app has permission to write to device storage
      * If the app does not has permission then the user will be prompted to grant permissions
@@ -205,6 +215,7 @@ public class MainActivity extends AppCompatActivity implements
     }
 
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -222,22 +233,50 @@ public class MainActivity extends AppCompatActivity implements
         } else Log.i("PEDRO", ">>>>Is selected as kiosk App");
 
         Log.i("PEDRO", "APP Initialized");
+
+        //String ipAddr = getLocalIpAddress();
+       // String MACAddr = getMacAddr();
+
+
+        /*if(MACAddr != null){
+            Log.i("PEDRO", MACAddr);
+        } else {
+            Log.i("PEDRO", "IP NULL");
+        }*/
+
         /*try {
             System.out.println(Inet4Address.getLocalHost().getHostAddress());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }*/
 
-        //String ipAddress = "10.1.20.87";
-        byte[] addr = new byte[]{10,1,20,87};
+        /*try {
+            fileListFinal = listFilesUsingDirectoryStream(".");
+            System.out.println(fileListFinal.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
 
+       /* byte[] ipAddr = new byte[] { 127, 0, 0, 1 };
+        InetAddress addr = null;
         try {
+            addr = InetAddress.getByAddress(ipAddr);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        String hostnameCanonical = addr.getCanonicalHostName();
+        System.out.println(hostnameCanonical);*/
+
+        //String ipAddress = "10.1.20.87";
+        //byte[] addr = new byte[]{10,1,20,87};
+
+        /*try {
             InetAddress  inet = InetAddress.getByAddress(addr);
             boolean reachable = inet.isReachable(5000);
             if(reachable) Log.i("PEDRO", "Ping");
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }/*
 
         /*try {
             MongoClient mongoClient = new MongoClient("10.0.2.15", 27017);
@@ -294,6 +333,68 @@ public class MainActivity extends AppCompatActivity implements
 
 
     }
+    /*public static String getMacAddr() {
+        try {
+            List<NetworkInterface> all = Collections.list(NetworkInterface.getNetworkInterfaces());
+            for (NetworkInterface nif : all) {
+                if (!nif.getName().equalsIgnoreCase("wlan0")) continue;
+
+                byte[] macBytes = nif.getHardwareAddress();
+                if (macBytes == null) {
+                    return "";
+                }
+
+                StringBuilder res1 = new StringBuilder();
+                for (byte b : macBytes) {
+                    res1.append(String.format("%02X:",b));
+                }
+
+                if (res1.length() > 0) {
+                    res1.deleteCharAt(res1.length() - 1);
+                }
+                return res1.toString();
+            }
+        } catch (Exception ex) {
+        }
+        return "null";
+    }*/
+
+    /*public static String getLocalIpAddress() {
+        Log.i("PEDRO", "Get Local Ip");
+        try {
+            Log.i("PEDRO", "try");
+            for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+                NetworkInterface intf = en.nextElement();
+                Log.i("PEDRO", "1");
+                for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+                    Log.i("PEDRO", "2");
+                    InetAddress inetAddress = enumIpAddr.nextElement();
+                    if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
+                        Log.i("PEDRO", "3");
+                        return inetAddress.getHostAddress();
+                    }
+                }
+            }
+        } catch (SocketException ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }*/
+
+
+    /*@RequiresApi(api = Build.VERSION_CODES.O)
+    public Set<String> listFilesUsingDirectoryStream(String dir) throws IOException {
+        Set<String> fileList = new HashSet<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get(dir))) {
+            for (Path path : stream) {
+                if (!Files.isDirectory(path)) {
+                    fileList.add(path.getFileName()
+                            .toString());
+                }
+            }
+        }
+        return fileList;
+    }*/
 
     Runnable runnable = new Runnable() {
         public void run() {
@@ -499,10 +600,10 @@ public class MainActivity extends AppCompatActivity implements
 
     public void nextQuestion(int question) {
         nextLayout();
-        if(question<=9) {
+        if(question<=4) {
             robot.askQuestion(questionsText[question]);
             Log.i("PEDRO", ">>>>Question asked");
-        } else if(question==10){
+        } else if(question == 5){
             for (int answer : answers) {
                 total = total + answer;
             }
@@ -536,6 +637,18 @@ public class MainActivity extends AppCompatActivity implements
             break;
             case 4: setContentView(R.layout.fourth_question);
             break;
+            /*case 5: setContentView(R.layout.fifth_question);
+            break;
+            case 6: setContentView(R.layout.sixth_question);
+            break;
+            case 7: setContentView(R.layout.seventh_question);
+            break;
+            case 8: setContentView(R.layout.eighth_question);
+            break;
+            case 9: setContentView(R.layout.ninth_question);
+            break;
+            case 10: setContentView(R.layout.tenth_question);
+            break;*/
             case 5: setContentView(R.layout.dialog_finish);
         }
     }
