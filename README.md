@@ -1,4 +1,4 @@
-# Temi Data Rating
+# Temi Data Gathering
 
 # connecting to temi (follow the instruction on https://github.com/robotemi/sdk/wiki/Installing-and-Uninstalling-temi-Applications)
 1. connect to the same network as temi
